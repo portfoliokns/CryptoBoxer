@@ -6,6 +6,7 @@ struct UploadView: View {
     @EnvironmentObject var keyStore: KeyStore
     @State private var message: String = "ファイルを選択すると設定したパスワードで暗号化されます。\n暗号化されたファイルはファイル暗号化BOXにアップロードされます。"
     @State private var warning: String = ""
+    @State private var useUUIDName = false
 
     var body: some View {
         VStack() {
@@ -25,6 +26,8 @@ struct UploadView: View {
                     .cornerRadius(8)
             }
             .buttonStyle(PlainButtonStyle())
+            Toggle("ファイル名を匿名化する", isOn: $useUUIDName)
+                .padding()
         }
         .frame(maxHeight: .infinity, alignment: .center)
     }
@@ -57,7 +60,12 @@ struct UploadView: View {
         
         do {
             let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
-            let newName = UUID().uuidString + "." + sourceURL.pathExtension
+            var newName = ""
+            if useUUIDName {
+                newName = UUID().uuidString + "." + sourceURL.pathExtension
+            } else {
+                newName = sourceURL.lastPathComponent
+            }
             let destination = storageFolder.appendingPathComponent(newName)
             let data = try Data(contentsOf: sourceURL)
             let encrypted = try CryptoBoxManager.shared.encrypt(data: data, using: key)
