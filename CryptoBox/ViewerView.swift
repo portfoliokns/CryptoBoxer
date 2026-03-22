@@ -7,19 +7,29 @@ struct SelectedImage: Identifiable {
 }
 
 struct ViewerView: View {
+    @State private var message: String = ""
+    @State private var warning: String = ""
     @State private var images: [URL] = []
     @State private var selectedImage: SelectedImage?
     @EnvironmentObject var keyStore: KeyStore
     @State private var isShowingMessage: Bool = false
+    let buttonWidth: CGFloat = 120
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
+            Text(warning)
+                .font(.title)
+                .foregroundColor(.red)
+            Text(message)
+                .font(.title)
+                .foregroundColor(.black)
             
-            HStack(spacing: 20) {
+            HStack(spacing: 0) {
                 Button(action: {
                     importFiles()
                 }) {
                     Text("暗号ファイル取込")
+                        .frame(width: buttonWidth)
                         .padding()
                         .background(Color.green)
                         .foregroundColor(.white)
@@ -29,9 +39,26 @@ struct ViewerView: View {
                 .padding()
                 
                 Button(action: {
-                    saveFiles()
+                    CryptoBoxManager.shared.openFinder(folderName: "storage")
+                    setMessages("Finderのstorageフォルダを開きました。", "")
                 }) {
-                    Text("書き出し(暗号化)")
+                    Text("フォルダを開く")
+                        .frame(width: buttonWidth)
+                        .padding()
+                        .background(Color.gray)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding()
+            }
+            
+            HStack(spacing: 0) {
+                Button(action: {
+                    downloadeEryptFilse()
+                }) {
+                    Text("一括書き出し(暗号化)")
+                        .frame(width: buttonWidth)
                         .padding()
                         .background(Color.blue)
                         .foregroundColor(.white)
@@ -43,7 +70,8 @@ struct ViewerView: View {
                 Button(action: {
                     downloadDecryptFilse()
                 }) {
-                    Text("書き出し(復号化)")
+                    Text("一括書き出し(復号化)")
+                        .frame(width: buttonWidth)
                         .padding()
                         .background(Color.blue)
                         .foregroundColor(.white)
@@ -56,6 +84,7 @@ struct ViewerView: View {
                     isShowingMessage = true
                 }) {
                     Text("全削除")
+                        .frame(width: buttonWidth)
                         .padding()
                         .background(Color.red)
                         .foregroundColor(.white)
@@ -69,22 +98,11 @@ struct ViewerView: View {
                         CryptoBoxManager.shared.clearFilse(folderName: "storage")
                         CryptoBoxManager.shared.clearFilse(folderName: "tmp")
                         self.images = []
+                        setMessages("CryptoBox上からファイルが全て削除されました。", "")
                     }
                 } message: {
                     Text("CryptoBoxに保存されているデータが全て削除されます。よろしいですか？")
                 }
-                
-                Button(action: {
-                    CryptoBoxManager.shared.openFinder(folderName: "storage")
-                }) {
-                    Text("フォルダを開く")
-                        .padding()
-                        .background(Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding()
             }
             
             ScrollView {
@@ -125,12 +143,14 @@ struct ViewerView: View {
                                         let ext = url.pathExtension
                                         let tmpURL = tmpFolder.appendingPathComponent(fileName).appendingPathExtension(ext)
                                         CryptoBoxManager.shared.openFinder(folderName: "tmp")
+                                        setMessages("Finderのtmpフォルダを開きました。", "")
+                                        warning = ""
                                         if FileManager.default.fileExists(atPath: tmpURL.path) { return }
                                         let encrypted = try Data(contentsOf: url)
                                         let decrypted = try CryptoBoxManager.shared.decrypt(data: encrypted, using: key)
                                         try decrypted.write(to: tmpURL)
                                     } catch {
-                                        debugPrint("動画の展開中にエラーが発生しました: \(error)")
+                                        setMessages("", "動画の展開中にエラーが発生しました。")
                                     }
                                 }
                             }
@@ -170,7 +190,7 @@ struct ViewerView: View {
         }
     }
     
-    func saveFiles() {
+    func downloadeEryptFilse() {
         let fileManager = FileManager.default
 
         let panel = NSOpenPanel()
@@ -178,6 +198,10 @@ struct ViewerView: View {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.title = "保存先フォルダを選択してください"
+        
+        DispatchQueue.main.async {
+            setMessages("保存中...", "")
+        }
 
         if panel.runModal() == .OK, let selectedFolder = panel.url {
             let canAccess = selectedFolder.startAccessingSecurityScopedResource()
@@ -206,10 +230,14 @@ struct ViewerView: View {
                     }
                     try fileManager.copyItem(at: fileURL, to: destination)
                 }
-                debugPrint("コピー完了: \(selectedFolder.path)")
+                setMessages("暗号化されたファイルの保存が完了しました。", "")
 
             } catch {
-                debugPrint("コピー中にエラーが発生しました: \(error.localizedDescription)")
+                setMessages("", "ファイルの保存に失敗しました。")
+            }
+        } else {
+            DispatchQueue.main.async {
+                setMessages("", "")
             }
         }
     }
@@ -220,6 +248,10 @@ struct ViewerView: View {
         panel.allowedContentTypes = [.image, .movie]
         panel.allowsMultipleSelection = true
         
+        DispatchQueue.main.async {
+            setMessages("取り込み中...", "")
+        }
+        
         do {
             let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
             if panel.runModal() == .OK {
@@ -229,12 +261,14 @@ struct ViewerView: View {
                         try fileManager.removeItem(at: destinationURL)
                     }
                     try fileManager.copyItem(at: url, to: destinationURL)
-                    debugPrint("取り込み成功: \(url.lastPathComponent)")
                 }
                 loadImages()
+                setMessages("暗号化ファイルを取り込みました。", "")
+            } else {
+                setMessages("", "")
             }
         } catch {
-            debugPrint("取り込み失敗: \(error.localizedDescription)")
+            setMessages("", "ファイルの保存に失敗しました。")
         }
     }
     
@@ -246,6 +280,10 @@ struct ViewerView: View {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.title = "保存先フォルダを選択してください"
+        
+        DispatchQueue.main.async {
+            setMessages("保存中...", "")
+        }
 
         if panel.runModal() == .OK, let selectedFolder = panel.url {
             let canAccess = selectedFolder.startAccessingSecurityScopedResource()
@@ -268,13 +306,21 @@ struct ViewerView: View {
                     let decryptedData = try CryptoBoxManager.shared.decrypt(data: encryptedData, using: key)
                     let destinationURL = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
                     try decryptedData.write(to: destinationURL)
-                    debugPrint("復号して保存成功: \(fileURL.lastPathComponent)")
                             }
-                debugPrint("ダウンロード完了: \(selectedFolder.path)")
+                setMessages("復号化したファイルのダウンロードが完了しました。", "")
 
             } catch {
-                debugPrint("コピー中にエラーが発生しました: \(error.localizedDescription)")
+                setMessages("", "ファイルのダウンロードに失敗しました。")
+            }
+        } else {
+            DispatchQueue.main.async {
+                setMessages("", "")
             }
         }
+    }
+    
+    func setMessages(_ messageText: String, _ warningText: String) {
+        message = messageText
+        warning = warningText
     }
 }
