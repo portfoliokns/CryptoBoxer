@@ -7,6 +7,7 @@ struct UploadView: View {
     @State private var message: String = "ファイルを選択すると設定したパスワードで暗号化されます。\n暗号化されたファイルはファイル暗号化BOXにアップロードされます。"
     @State private var warning: String = ""
     @State private var useUUIDName = false
+    @State private var deleteFlag = false
 
     var body: some View {
         VStack() {
@@ -27,7 +28,9 @@ struct UploadView: View {
             }
             .buttonStyle(PlainButtonStyle())
             Toggle("ファイル名を匿名化する", isOn: $useUUIDName)
-                .padding()
+                .padding(.vertical, 4)
+            Toggle("元ファイルを削除する", isOn: $deleteFlag)
+                .padding(.vertical, 4)
         }
         .frame(maxHeight: .infinity, alignment: .center)
     }
@@ -47,6 +50,7 @@ struct UploadView: View {
             for url in panel.urls {
                 saveFile(url)
             }
+            message = "暗号化されました。画像・動画の一覧をご確認ください。"
         }
     }
     
@@ -70,7 +74,10 @@ struct UploadView: View {
             let data = try Data(contentsOf: sourceURL)
             let encrypted = try CryptoBoxManager.shared.encrypt(data: data, using: key)
             try encrypted.write(to: destination)
-            message = "暗号化されました。画像・動画の一覧をご確認ください。"
+            if deleteFlag {
+                try FileManager.default.removeItem(at: sourceURL)
+            }
+            message = "暗号化中..."
         } catch {
             warning = "アップロードまたは暗号化に失敗しました。"
         }
