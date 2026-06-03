@@ -11,7 +11,8 @@ class CryptoBoxManager {
     func makeKey(from password: String) -> SymmetricKey {
         let passwordData = Data(password.utf8)
         var hash = SHA256.hash(data: passwordData)
-        for _ in 1..<2000000 {
+        let stretchTimes = 3000000
+        for _ in 1..<stretchTimes {
             hash = SHA256.hash(data: Data(hash))
             count += 1
         }
