@@ -1,16 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct SelectedImage: Identifiable {
-    let id = UUID()
-    let url: URL
-}
-
 struct ViewerView: View {
     @State private var message: String = ""
     @State private var warning: String = ""
-    @State private var images: [URL] = []
-    @State private var selectedImage: SelectedImage?
+    @State private var files: [URL] = []
     @EnvironmentObject var keyStore: KeyStore
     @State private var isShowingMessage: Bool = false
     let buttonWidth: CGFloat = 120
@@ -97,7 +91,7 @@ struct ViewerView: View {
                     Button("削除する", role: .destructive) {
                         CryptoBoxManager.shared.clearFilse(folderName: "storage")
                         CryptoBoxManager.shared.clearFilse(folderName: "tmp")
-                        self.images = []
+                        self.files = []
                         setMessages("CryptoBox上からファイルが全て削除されました。", "")
                     }
                 } message: {
@@ -109,66 +103,46 @@ struct ViewerView: View {
                 LazyVGrid(columns: [
                     GridItem(.adaptive(minimum: 120))
                 ]) {
-                    ForEach(images, id: \.self) { url in
-                        let ext = url.pathExtension.lowercased()
-                        if ["png","jpg","jpeg","heic"].contains(ext) {
-                            if let key = keyStore.key,
-                               let encrypted = try? Data(contentsOf: url),
-                               let decrypted = try? CryptoBoxManager.shared.decrypt(data: encrypted, using: key),
-                               let nsImage = NSImage(data: decrypted) {
-                                Image(nsImage: nsImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(height: 120)
-                                    .cornerRadius(8)
-                                    .onTapGesture {
-                                        selectedImage = SelectedImage(url: url)
-                                    }
-                            }
-                        } else if ["mp4","mov","m4v","webm"].contains(ext) {
-                            VStack {
-                                Image(systemName: "video.fill")
-                                    .font(.largeTitle)
-                                Text(url.lastPathComponent)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                            }
-                            .frame(height: 120)
-                            .onTapGesture {
-                                guard let key = keyStore.key else { return }
-                                Task{
-                                    do {
-                                        let tmpFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "tmp")
-                                        let fileName = url.deletingPathExtension().lastPathComponent
-                                        let ext = url.pathExtension
-                                        let tmpURL = tmpFolder.appendingPathComponent(fileName).appendingPathExtension(ext)
-                                        CryptoBoxManager.shared.openFinder(folderName: "tmp")
-                                        setMessages("Finderのtmpフォルダを開きました。", "")
-                                        warning = ""
-                                        if FileManager.default.fileExists(atPath: tmpURL.path) { return }
-                                        let encrypted = try Data(contentsOf: url)
-                                        let decrypted = try CryptoBoxManager.shared.decrypt(data: encrypted, using: key)
-                                        try decrypted.write(to: tmpURL)
-                                    } catch {
-                                        setMessages("", "動画の展開中にエラーが発生しました。")
-                                    }
+                    ForEach(files, id: \.self) { url in
+                        VStack {
+                            Image(systemName: "key")
+                                .font(.largeTitle)
+                            Text(url.lastPathComponent)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                        .frame(height: 120)
+                        .onTapGesture {
+                            guard let key = keyStore.key else { return }
+                            Task{
+                                do {
+                                    let tmpFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "tmp")
+                                    let fileName = url.deletingPathExtension().lastPathComponent
+                                    let ext = url.pathExtension
+                                    let tmpURL = tmpFolder.appendingPathComponent(fileName).appendingPathExtension(ext)
+                                    CryptoBoxManager.shared.openFinder(folderName: "tmp")
+                                    setMessages("Finderのtmpフォルダを開きました。", "")
+                                    warning = ""
+                                    if FileManager.default.fileExists(atPath: tmpURL.path) { return }
+                                    let encrypted = try Data(contentsOf: url)
+                                    let decrypted = try CryptoBoxManager.shared.decrypt(data: encrypted, using: key)
+                                    try decrypted.write(to: tmpURL)
+                                } catch {
+                                    setMessages("", "動画の展開中にエラーが発生しました。")
                                 }
                             }
                         }
                     }
                 }
-                .padding()
             }
-            .onAppear {
-                loadImages()
-            }
-            .sheet(item: $selectedImage) { item in
-                ImageDetailView(imageURL: item.url)
-            }
+            .padding()
+        }
+        .onAppear {
+            loadFiles()
         }
     }
     
-    func loadImages() {
+    func loadFiles() {
         let fileManager = FileManager.default
         do {
             let appSupport = try fileManager.url(
@@ -180,11 +154,11 @@ struct ViewerView: View {
             let storage = appSupport
                 .appendingPathComponent("CryptoBox")
                 .appendingPathComponent("storage")
-            let files = try fileManager.contentsOfDirectory(
+            let allFiles = try fileManager.contentsOfDirectory(
                 at: storage,
                 includingPropertiesForKeys: nil
             )
-            images = files
+            files = filterHiddenFiles(allFiles: allFiles)
         } catch {
             debugPrint("読み込みエラー", error)
         }
@@ -213,7 +187,7 @@ struct ViewerView: View {
 
             do {
                 let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
-                let allowedExtensions: Set<String> = ["png","jpg","jpeg","heic","gif","mp4","mov","m4v", "webm"]
+                let allowedExtensions: Set<String> = ["png","jpg","jpeg","heic","gif","mp4","mov","m4v", "webm", "pdf"]
 
                 let files = try fileManager.contentsOfDirectory(
                     at: storageFolder,
@@ -262,7 +236,7 @@ struct ViewerView: View {
                     }
                     try fileManager.copyItem(at: url, to: destinationURL)
                 }
-                loadImages()
+                loadFiles()
                 setMessages("暗号化ファイルを取り込みました。", "")
             } else {
                 setMessages("", "")
@@ -295,18 +269,20 @@ struct ViewerView: View {
 
             do {
                 let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
-                let files = try fileManager.contentsOfDirectory(at: storageFolder, includingPropertiesForKeys: nil)
+                let allFiles = try fileManager.contentsOfDirectory(at: storageFolder, includingPropertiesForKeys: nil)
                 guard let key = keyStore.key else {
-                    debugPrint("エラー: 復号キーが見つかりません")
+                    setMessages("", "復号キーが見つかりません。パスワードを設定し直してください。")
                     return
                 }
                 
-                for fileURL in files {
+                let filterringFiles = filterHiddenFiles(allFiles: allFiles)
+                
+                for fileURL in filterringFiles {
                     let encryptedData = try Data(contentsOf: fileURL)
                     let decryptedData = try CryptoBoxManager.shared.decrypt(data: encryptedData, using: key)
                     let destinationURL = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
                     try decryptedData.write(to: destinationURL)
-                            }
+                }
                 setMessages("復号化したファイルのダウンロードが完了しました。", "")
 
             } catch {
@@ -322,5 +298,12 @@ struct ViewerView: View {
     func setMessages(_ messageText: String, _ warningText: String) {
         message = messageText
         warning = warningText
+    }
+    
+    func filterHiddenFiles(allFiles: [URL]) -> [URL] {
+        let filterringFiles = allFiles.filter {
+            !$0.lastPathComponent.hasPrefix(".")
+        }
+        return filterringFiles
     }
 }

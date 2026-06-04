@@ -43,7 +43,7 @@ struct UploadView: View {
         warning = ""
         
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.image, .movie]
+        panel.allowedContentTypes = [.image, .movie, .pdf, .audio, .text]
         panel.allowsMultipleSelection = true
         
         if panel.runModal() == .OK {
