@@ -138,11 +138,11 @@ struct ViewerView: View {
             .padding()
         }
         .onAppear {
-            loadImages()
+            loadFiles()
         }
     }
     
-    func loadImages() {
+    func loadFiles() {
         let fileManager = FileManager.default
         do {
             let appSupport = try fileManager.url(
@@ -154,11 +154,11 @@ struct ViewerView: View {
             let storage = appSupport
                 .appendingPathComponent("CryptoBox")
                 .appendingPathComponent("storage")
-            let filesPath = try fileManager.contentsOfDirectory(
+            let allFiles = try fileManager.contentsOfDirectory(
                 at: storage,
                 includingPropertiesForKeys: nil
             )
-            files = filesPath
+            files = filterHiddenFiles(allFiles: allFiles)
         } catch {
             debugPrint("読み込みエラー", error)
         }
@@ -236,7 +236,7 @@ struct ViewerView: View {
                     }
                     try fileManager.copyItem(at: url, to: destinationURL)
                 }
-                loadImages()
+                loadFiles()
                 setMessages("暗号化ファイルを取り込みました。", "")
             } else {
                 setMessages("", "")
@@ -269,18 +269,20 @@ struct ViewerView: View {
 
             do {
                 let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
-                let files = try fileManager.contentsOfDirectory(at: storageFolder, includingPropertiesForKeys: nil)
+                let allFiles = try fileManager.contentsOfDirectory(at: storageFolder, includingPropertiesForKeys: nil)
                 guard let key = keyStore.key else {
-                    debugPrint("エラー: 復号キーが見つかりません")
+                    setMessages("", "復号キーが見つかりません。パスワードを設定し直してください。")
                     return
                 }
                 
-                for fileURL in files {
+                let filterringFiles = filterHiddenFiles(allFiles: allFiles)
+                
+                for fileURL in filterringFiles {
                     let encryptedData = try Data(contentsOf: fileURL)
                     let decryptedData = try CryptoBoxManager.shared.decrypt(data: encryptedData, using: key)
                     let destinationURL = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
                     try decryptedData.write(to: destinationURL)
-                            }
+                }
                 setMessages("復号化したファイルのダウンロードが完了しました。", "")
 
             } catch {
@@ -296,5 +298,12 @@ struct ViewerView: View {
     func setMessages(_ messageText: String, _ warningText: String) {
         message = messageText
         warning = warningText
+    }
+    
+    func filterHiddenFiles(allFiles: [URL]) -> [URL] {
+        let filterringFiles = allFiles.filter {
+            !$0.lastPathComponent.hasPrefix(".")
+        }
+        return filterringFiles
     }
 }
