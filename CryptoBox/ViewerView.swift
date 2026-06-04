@@ -125,9 +125,9 @@ struct ViewerView: View {
                                         selectedImage = SelectedImage(url: url)
                                     }
                             }
-                        } else if ["mp4","mov","m4v","webm"].contains(ext) {
+                        } else {
                             VStack {
-                                Image(systemName: "video.fill")
+                                Image(systemName: "key")
                                     .font(.largeTitle)
                                 Text(url.lastPathComponent)
                                     .font(.caption)
@@ -213,7 +213,7 @@ struct ViewerView: View {
 
             do {
                 let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
-                let allowedExtensions: Set<String> = ["png","jpg","jpeg","heic","gif","mp4","mov","m4v", "webm"]
+                let allowedExtensions: Set<String> = ["png","jpg","jpeg","heic","gif","mp4","mov","m4v", "webm", "pdf"]
 
                 let files = try fileManager.contentsOfDirectory(
                     at: storageFolder,
