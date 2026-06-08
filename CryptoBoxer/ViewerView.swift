@@ -105,7 +105,7 @@ struct ViewerView: View {
                 ]) {
                     ForEach(files, id: \.self) { url in
                         VStack {
-                            Image(systemName: "key")
+                            Image(systemName: "lock")
                                 .font(.largeTitle)
                             Text(url.lastPathComponent)
                                 .font(.caption)
