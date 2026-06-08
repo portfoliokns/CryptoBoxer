@@ -68,7 +68,7 @@ struct PasswordInputView: View {
                 return
             }
         }
-        keyStore.key = CryptoBoxManager.shared.makeKey(from: password)
+        keyStore.key = CryptoBoxerManager.shared.makeKey(from: password)
         dismiss()
         warning = ""
     }

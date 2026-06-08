@@ -63,7 +63,7 @@ struct UploadView: View {
         warning = ""
         
         do {
-            let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+            let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
             var newName = ""
             if useUUIDName {
                 newName = UUID().uuidString + "." + sourceURL.pathExtension
@@ -72,7 +72,7 @@ struct UploadView: View {
             }
             let destination = storageFolder.appendingPathComponent(newName)
             let data = try Data(contentsOf: sourceURL)
-            let encrypted = try CryptoBoxManager.shared.encrypt(data: data, using: key)
+            let encrypted = try CryptoBoxerManager.shared.encrypt(data: data, using: key)
             try encrypted.write(to: destination)
             if deleteFlag {
                 try FileManager.default.removeItem(at: sourceURL)

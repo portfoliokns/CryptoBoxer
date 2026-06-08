@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CryptoBoxApp: App {
+struct CryptoBoxerApp: App {
     @StateObject var keyStore = KeyStore()
     
     var body: some Scene {

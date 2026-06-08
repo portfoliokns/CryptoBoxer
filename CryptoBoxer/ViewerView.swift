@@ -33,7 +33,7 @@ struct ViewerView: View {
                 .padding()
                 
                 Button(action: {
-                    CryptoBoxManager.shared.openFinder(folderName: "storage")
+                    CryptoBoxerManager.shared.openFinder(folderName: "storage")
                     setMessages("Finderのstorageフォルダを開きました。", "")
                 }) {
                     Text("フォルダを開く")
@@ -89,13 +89,13 @@ struct ViewerView: View {
                 .alert("データの全削除", isPresented: $isShowingMessage) {
                     Button("キャンセル", role: .cancel) {}
                     Button("削除する", role: .destructive) {
-                        CryptoBoxManager.shared.clearFilse(folderName: "storage")
-                        CryptoBoxManager.shared.clearFilse(folderName: "tmp")
+                        CryptoBoxerManager.shared.clearFilse(folderName: "storage")
+                        CryptoBoxerManager.shared.clearFilse(folderName: "tmp")
                         self.files = []
-                        setMessages("CryptoBox上からファイルが全て削除されました。", "")
+                        setMessages("CryptoBoxer上からファイルが全て削除されました。", "")
                     }
                 } message: {
-                    Text("CryptoBoxに保存されているデータが全て削除されます。よろしいですか？")
+                    Text("CryptoBoxerに保存されているデータが全て削除されます。よろしいですか？")
                 }
             }
             
@@ -116,16 +116,16 @@ struct ViewerView: View {
                             guard let key = keyStore.key else { return }
                             Task{
                                 do {
-                                    let tmpFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "tmp")
+                                    let tmpFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "tmp")
                                     let fileName = url.deletingPathExtension().lastPathComponent
                                     let ext = url.pathExtension
                                     let tmpURL = tmpFolder.appendingPathComponent(fileName).appendingPathExtension(ext)
-                                    CryptoBoxManager.shared.openFinder(folderName: "tmp")
+                                    CryptoBoxerManager.shared.openFinder(folderName: "tmp")
                                     setMessages("Finderのtmpフォルダを開きました。", "")
                                     warning = ""
                                     if FileManager.default.fileExists(atPath: tmpURL.path) { return }
                                     let encrypted = try Data(contentsOf: url)
-                                    let decrypted = try CryptoBoxManager.shared.decrypt(data: encrypted, using: key)
+                                    let decrypted = try CryptoBoxerManager.shared.decrypt(data: encrypted, using: key)
                                     try decrypted.write(to: tmpURL)
                                 } catch {
                                     setMessages("", "動画の展開中にエラーが発生しました。")
@@ -152,7 +152,7 @@ struct ViewerView: View {
                 create: false
             )
             let storage = appSupport
-                .appendingPathComponent("CryptoBox")
+                .appendingPathComponent("CryptoBoxer")
                 .appendingPathComponent("storage")
             let allFiles = try fileManager.contentsOfDirectory(
                 at: storage,
@@ -186,7 +186,7 @@ struct ViewerView: View {
             }
 
             do {
-                let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+                let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
                 let allowedExtensions: Set<String> = ["png","jpg","jpeg","heic","gif","mp4","mov","m4v", "webm", "pdf"]
 
                 let files = try fileManager.contentsOfDirectory(
@@ -227,7 +227,7 @@ struct ViewerView: View {
         }
         
         do {
-            let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+            let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
             if panel.runModal() == .OK {
                 for url in panel.urls {
                     let destinationURL = storageFolder.appendingPathComponent(url.lastPathComponent)
@@ -268,7 +268,7 @@ struct ViewerView: View {
             }
 
             do {
-                let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+                let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
                 let allFiles = try fileManager.contentsOfDirectory(at: storageFolder, includingPropertiesForKeys: nil)
                 guard let key = keyStore.key else {
                     setMessages("", "復号キーが見つかりません。パスワードを設定し直してください。")
@@ -279,7 +279,7 @@ struct ViewerView: View {
                 
                 for fileURL in filterringFiles {
                     let encryptedData = try Data(contentsOf: fileURL)
-                    let decryptedData = try CryptoBoxManager.shared.decrypt(data: encryptedData, using: key)
+                    let decryptedData = try CryptoBoxerManager.shared.decrypt(data: encryptedData, using: key)
                     let destinationURL = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
                     try decryptedData.write(to: destinationURL)
                 }

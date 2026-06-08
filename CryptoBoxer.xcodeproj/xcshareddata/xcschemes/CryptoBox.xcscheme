@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "CCB8AD192F628C2000075789"
-               BuildableName = "CryptoBox.app"
-               BlueprintName = "CryptoBox"
-               ReferencedContainer = "container:CryptoBox.xcodeproj">
+               BuildableName = "CryptoBoxer.app"
+               BlueprintName = "CryptoBoxer"
+               ReferencedContainer = "container:CryptoBoxer.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,9 +46,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "CCB8AD192F628C2000075789"
-            BuildableName = "CryptoBox.app"
-            BlueprintName = "CryptoBox"
-            ReferencedContainer = "container:CryptoBox.xcodeproj">
+            BuildableName = "CryptoBoxer.app"
+            BlueprintName = "CryptoBoxer"
+            ReferencedContainer = "container:CryptoBoxer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -63,9 +63,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "CCB8AD192F628C2000075789"
-            BuildableName = "CryptoBox.app"
-            BlueprintName = "CryptoBox"
-            ReferencedContainer = "container:CryptoBox.xcodeproj">
+            BuildableName = "CryptoBoxer.app"
+            BlueprintName = "CryptoBoxer"
+            ReferencedContainer = "container:CryptoBoxer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
