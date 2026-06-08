@@ -230,9 +230,16 @@ struct ViewerView: View {
             let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
             if panel.runModal() == .OK {
                 for url in panel.urls {
-                    let destinationURL = storageFolder.appendingPathComponent(url.lastPathComponent)
-                    if fileManager.fileExists(atPath: destinationURL.path) {
-                        try fileManager.removeItem(at: destinationURL)
+                    let baseName = url.deletingPathExtension().lastPathComponent
+                    let extensionName = url.pathExtension
+                    var newName = url.lastPathComponent
+                    
+                    var counter = 1
+                    var destinationURL = storageFolder.appendingPathComponent(url.lastPathComponent)
+                    while FileManager.default.fileExists(atPath: destinationURL.path) {
+                        newName = "\(baseName)(\(counter)).\(extensionName)"
+                        destinationURL = storageFolder.appendingPathComponent(newName)
+                        counter += 1
                     }
                     try fileManager.copyItem(at: url, to: destinationURL)
                 }

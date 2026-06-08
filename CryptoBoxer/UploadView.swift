@@ -68,8 +68,19 @@ struct UploadView: View {
             if useUUIDName {
                 newName = UUID().uuidString + "." + sourceURL.pathExtension
             } else {
+                let baseName = sourceURL.deletingPathExtension().lastPathComponent
+                let extensionName = sourceURL.pathExtension
                 newName = sourceURL.lastPathComponent
+                
+                var counter = 1
+                var destinationURL = storageFolder.appendingPathComponent(newName)
+                while FileManager.default.fileExists(atPath: destinationURL.path) {
+                    newName = "\(baseName)(\(counter)).\(extensionName)"
+                    destinationURL = storageFolder.appendingPathComponent(newName)
+                    counter += 1
+                }
             }
+            
             let destination = storageFolder.appendingPathComponent(newName)
             let data = try Data(contentsOf: sourceURL)
             let encrypted = try CryptoBoxerManager.shared.encrypt(data: data, using: key)
