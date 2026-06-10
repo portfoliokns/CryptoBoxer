@@ -33,7 +33,7 @@ struct ViewerView: View {
                 .padding()
                 
                 Button(action: {
-                    CryptoBoxManager.shared.openFinder(folderName: "storage")
+                    CryptoBoxerManager.shared.openFinder(folderName: "storage")
                     setMessages("Finderのstorageフォルダを開きました。", "")
                 }) {
                     Text("フォルダを開く")
@@ -49,7 +49,7 @@ struct ViewerView: View {
             
             HStack(spacing: 0) {
                 Button(action: {
-                    downloadeEryptFilse()
+                    downloadEncryptFiles()
                 }) {
                     Text("一括書き出し(暗号化)")
                         .frame(width: buttonWidth)
@@ -62,7 +62,7 @@ struct ViewerView: View {
                 .padding()
                 
                 Button(action: {
-                    downloadDecryptFilse()
+                    downloadDecryptFiles()
                 }) {
                     Text("一括書き出し(復号化)")
                         .frame(width: buttonWidth)
@@ -89,13 +89,13 @@ struct ViewerView: View {
                 .alert("データの全削除", isPresented: $isShowingMessage) {
                     Button("キャンセル", role: .cancel) {}
                     Button("削除する", role: .destructive) {
-                        CryptoBoxManager.shared.clearFilse(folderName: "storage")
-                        CryptoBoxManager.shared.clearFilse(folderName: "tmp")
+                        CryptoBoxerManager.shared.clearFiles(folderName: "storage")
+                        CryptoBoxerManager.shared.clearFiles(folderName: "tmp")
                         self.files = []
-                        setMessages("CryptoBox上からファイルが全て削除されました。", "")
+                        setMessages("CryptoBoxer上からファイルが全て削除されました。", "")
                     }
                 } message: {
-                    Text("CryptoBoxに保存されているデータが全て削除されます。よろしいですか？")
+                    Text("CryptoBoxerに保存されているデータが全て削除されます。よろしいですか？")
                 }
             }
             
@@ -105,7 +105,7 @@ struct ViewerView: View {
                 ]) {
                     ForEach(files, id: \.self) { url in
                         VStack {
-                            Image(systemName: "key")
+                            Image(systemName: "lock")
                                 .font(.largeTitle)
                             Text(url.lastPathComponent)
                                 .font(.caption)
@@ -116,16 +116,16 @@ struct ViewerView: View {
                             guard let key = keyStore.key else { return }
                             Task{
                                 do {
-                                    let tmpFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "tmp")
+                                    let tmpFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "tmp")
                                     let fileName = url.deletingPathExtension().lastPathComponent
                                     let ext = url.pathExtension
                                     let tmpURL = tmpFolder.appendingPathComponent(fileName).appendingPathExtension(ext)
-                                    CryptoBoxManager.shared.openFinder(folderName: "tmp")
+                                    CryptoBoxerManager.shared.openFinder(folderName: "tmp")
                                     setMessages("Finderのtmpフォルダを開きました。", "")
                                     warning = ""
                                     if FileManager.default.fileExists(atPath: tmpURL.path) { return }
                                     let encrypted = try Data(contentsOf: url)
-                                    let decrypted = try CryptoBoxManager.shared.decrypt(data: encrypted, using: key)
+                                    let decrypted = try CryptoBoxerManager.shared.decrypt(data: encrypted, using: key)
                                     try decrypted.write(to: tmpURL)
                                 } catch {
                                     setMessages("", "動画の展開中にエラーが発生しました。")
@@ -152,7 +152,7 @@ struct ViewerView: View {
                 create: false
             )
             let storage = appSupport
-                .appendingPathComponent("CryptoBox")
+                .appendingPathComponent("CryptoBoxer")
                 .appendingPathComponent("storage")
             let allFiles = try fileManager.contentsOfDirectory(
                 at: storage,
@@ -164,7 +164,7 @@ struct ViewerView: View {
         }
     }
     
-    func downloadeEryptFilse() {
+    func downloadEncryptFiles() {
         let fileManager = FileManager.default
 
         let panel = NSOpenPanel()
@@ -186,7 +186,7 @@ struct ViewerView: View {
             }
 
             do {
-                let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+                let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
                 let allowedExtensions: Set<String> = ["png","jpg","jpeg","heic","gif","mp4","mov","m4v", "webm", "pdf"]
 
                 let files = try fileManager.contentsOfDirectory(
@@ -197,12 +197,12 @@ struct ViewerView: View {
                 }
 
                 for fileURL in files {
-                    let destination = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
+                    let destinationURL = generateUniqueURL(for: fileURL.lastPathComponent, in: selectedFolder)
 
-                    if fileManager.fileExists(atPath: destination.path) {
-                        try fileManager.removeItem(at: destination)
+                    if fileManager.fileExists(atPath: destinationURL.path) {
+                        try fileManager.removeItem(at: destinationURL)
                     }
-                    try fileManager.copyItem(at: fileURL, to: destination)
+                    try fileManager.copyItem(at: fileURL, to: destinationURL)
                 }
                 setMessages("暗号化されたファイルの保存が完了しました。", "")
 
@@ -227,12 +227,19 @@ struct ViewerView: View {
         }
         
         do {
-            let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+            let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
             if panel.runModal() == .OK {
                 for url in panel.urls {
-                    let destinationURL = storageFolder.appendingPathComponent(url.lastPathComponent)
-                    if fileManager.fileExists(atPath: destinationURL.path) {
-                        try fileManager.removeItem(at: destinationURL)
+                    let baseName = url.deletingPathExtension().lastPathComponent
+                    let extensionName = url.pathExtension
+                    var newName = url.lastPathComponent
+                    
+                    var counter = 1
+                    var destinationURL = storageFolder.appendingPathComponent(url.lastPathComponent)
+                    while FileManager.default.fileExists(atPath: destinationURL.path) {
+                        newName = "\(baseName)(\(counter)).\(extensionName)"
+                        destinationURL = storageFolder.appendingPathComponent(newName)
+                        counter += 1
                     }
                     try fileManager.copyItem(at: url, to: destinationURL)
                 }
@@ -246,7 +253,7 @@ struct ViewerView: View {
         }
     }
     
-    func downloadDecryptFilse() {
+    func downloadDecryptFiles() {
         let fileManager = FileManager.default
 
         let panel = NSOpenPanel()
@@ -268,19 +275,19 @@ struct ViewerView: View {
             }
 
             do {
-                let storageFolder = try CryptoBoxManager.shared.getFolderPath(folderName: "storage")
+                let storageFolder = try CryptoBoxerManager.shared.getFolderPath(folderName: "storage")
                 let allFiles = try fileManager.contentsOfDirectory(at: storageFolder, includingPropertiesForKeys: nil)
                 guard let key = keyStore.key else {
                     setMessages("", "復号キーが見つかりません。パスワードを設定し直してください。")
                     return
                 }
                 
-                let filterringFiles = filterHiddenFiles(allFiles: allFiles)
+                let filteringFiles = filterHiddenFiles(allFiles: allFiles)
                 
-                for fileURL in filterringFiles {
+                for fileURL in filteringFiles {
                     let encryptedData = try Data(contentsOf: fileURL)
-                    let decryptedData = try CryptoBoxManager.shared.decrypt(data: encryptedData, using: key)
-                    let destinationURL = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
+                    let decryptedData = try CryptoBoxerManager.shared.decrypt(data: encryptedData, using: key)
+                    let destinationURL = generateUniqueURL(for: fileURL.lastPathComponent, in: selectedFolder)
                     try decryptedData.write(to: destinationURL)
                 }
                 setMessages("復号化したファイルのダウンロードが完了しました。", "")
@@ -301,9 +308,30 @@ struct ViewerView: View {
     }
     
     func filterHiddenFiles(allFiles: [URL]) -> [URL] {
-        let filterringFiles = allFiles.filter {
+        let filteringFiles = allFiles.filter {
             !$0.lastPathComponent.hasPrefix(".")
         }
-        return filterringFiles
+        return filteringFiles
+    }
+    
+    func generateUniqueURL(for fileName: String, in folderURL: URL) -> URL {
+        let fileManager = FileManager.default
+        var destinationURL = folderURL.appendingPathComponent(fileName)
+        
+        if !fileManager.fileExists(atPath: destinationURL.path) {
+            return destinationURL
+        }
+        
+        let baseName = destinationURL.deletingPathExtension().lastPathComponent
+        let fileExtension = destinationURL.pathExtension
+        
+        var counter = 1
+        while fileManager.fileExists(atPath: destinationURL.path) {
+            let newFileName = "\(baseName) (\(counter)).\(fileExtension)"
+            destinationURL = folderURL.appendingPathComponent(newFileName)
+            counter += 1
+        }
+        
+        return destinationURL
     }
 }

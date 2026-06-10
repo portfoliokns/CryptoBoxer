@@ -2,8 +2,8 @@ import Foundation
 import CryptoKit
 import AppKit
 
-class CryptoBoxManager {
-    static let shared = CryptoBoxManager()
+class CryptoBoxerManager {
+    static let shared = CryptoBoxerManager()
     private init() {}
     
     private var count: Int = 0
@@ -41,7 +41,7 @@ class CryptoBoxManager {
             create: true
         )
         let folderPath = appSupport
-            .appendingPathComponent("CryptoBox")
+            .appendingPathComponent("CryptoBoxer")
             .appendingPathComponent(folderName)
             
         try fileManager.createDirectory(
@@ -64,14 +64,14 @@ class CryptoBoxManager {
         }
         
         let folderPath = appSupport
-            .appendingPathComponent("CryptoBox")
+            .appendingPathComponent("CryptoBoxer")
             .appendingPathComponent(folderName)
         NSWorkspace.shared.open(folderPath)
     }
     
-    func clearFilse(folderName: String) {
+    func clearFiles(folderName: String) {
         let fileManager = FileManager.default
-        guard let folder = try? CryptoBoxManager.shared.getFolderPath(folderName: folderName) else {return}
+        guard let folder = try? CryptoBoxerManager.shared.getFolderPath(folderName: folderName) else {return}
         let files = (try? fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
         for file in files {
             try? fileManager.removeItem(at: file)
