@@ -69,7 +69,7 @@ class CryptoBoxerManager {
         NSWorkspace.shared.open(folderPath)
     }
     
-    func clearFilse(folderName: String) {
+    func clearFiles(folderName: String) {
         let fileManager = FileManager.default
         guard let folder = try? CryptoBoxerManager.shared.getFolderPath(folderName: folderName) else {return}
         let files = (try? fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []

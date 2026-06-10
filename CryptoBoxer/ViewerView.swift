@@ -49,7 +49,7 @@ struct ViewerView: View {
             
             HStack(spacing: 0) {
                 Button(action: {
-                    downloadeEryptFilse()
+                    downloadEncryptFiles()
                 }) {
                     Text("一括書き出し(暗号化)")
                         .frame(width: buttonWidth)
@@ -62,7 +62,7 @@ struct ViewerView: View {
                 .padding()
                 
                 Button(action: {
-                    downloadDecryptFilse()
+                    downloadDecryptFiles()
                 }) {
                     Text("一括書き出し(復号化)")
                         .frame(width: buttonWidth)
@@ -89,8 +89,8 @@ struct ViewerView: View {
                 .alert("データの全削除", isPresented: $isShowingMessage) {
                     Button("キャンセル", role: .cancel) {}
                     Button("削除する", role: .destructive) {
-                        CryptoBoxerManager.shared.clearFilse(folderName: "storage")
-                        CryptoBoxerManager.shared.clearFilse(folderName: "tmp")
+                        CryptoBoxerManager.shared.clearFiles(folderName: "storage")
+                        CryptoBoxerManager.shared.clearFiles(folderName: "tmp")
                         self.files = []
                         setMessages("CryptoBoxer上からファイルが全て削除されました。", "")
                     }
@@ -164,7 +164,7 @@ struct ViewerView: View {
         }
     }
     
-    func downloadeEryptFilse() {
+    func downloadEncryptFiles() {
         let fileManager = FileManager.default
 
         let panel = NSOpenPanel()
@@ -197,12 +197,12 @@ struct ViewerView: View {
                 }
 
                 for fileURL in files {
-                    let destination = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
+                    let destinationURL = generateUniqueURL(for: fileURL.lastPathComponent, in: selectedFolder)
 
-                    if fileManager.fileExists(atPath: destination.path) {
-                        try fileManager.removeItem(at: destination)
+                    if fileManager.fileExists(atPath: destinationURL.path) {
+                        try fileManager.removeItem(at: destinationURL)
                     }
-                    try fileManager.copyItem(at: fileURL, to: destination)
+                    try fileManager.copyItem(at: fileURL, to: destinationURL)
                 }
                 setMessages("暗号化されたファイルの保存が完了しました。", "")
 
@@ -253,7 +253,7 @@ struct ViewerView: View {
         }
     }
     
-    func downloadDecryptFilse() {
+    func downloadDecryptFiles() {
         let fileManager = FileManager.default
 
         let panel = NSOpenPanel()
@@ -282,12 +282,12 @@ struct ViewerView: View {
                     return
                 }
                 
-                let filterringFiles = filterHiddenFiles(allFiles: allFiles)
+                let filteringFiles = filterHiddenFiles(allFiles: allFiles)
                 
-                for fileURL in filterringFiles {
+                for fileURL in filteringFiles {
                     let encryptedData = try Data(contentsOf: fileURL)
                     let decryptedData = try CryptoBoxerManager.shared.decrypt(data: encryptedData, using: key)
-                    let destinationURL = selectedFolder.appendingPathComponent(fileURL.lastPathComponent)
+                    let destinationURL = generateUniqueURL(for: fileURL.lastPathComponent, in: selectedFolder)
                     try decryptedData.write(to: destinationURL)
                 }
                 setMessages("復号化したファイルのダウンロードが完了しました。", "")
@@ -308,9 +308,30 @@ struct ViewerView: View {
     }
     
     func filterHiddenFiles(allFiles: [URL]) -> [URL] {
-        let filterringFiles = allFiles.filter {
+        let filteringFiles = allFiles.filter {
             !$0.lastPathComponent.hasPrefix(".")
         }
-        return filterringFiles
+        return filteringFiles
+    }
+    
+    func generateUniqueURL(for fileName: String, in folderURL: URL) -> URL {
+        let fileManager = FileManager.default
+        var destinationURL = folderURL.appendingPathComponent(fileName)
+        
+        if !fileManager.fileExists(atPath: destinationURL.path) {
+            return destinationURL
+        }
+        
+        let baseName = destinationURL.deletingPathExtension().lastPathComponent
+        let fileExtension = destinationURL.pathExtension
+        
+        var counter = 1
+        while fileManager.fileExists(atPath: destinationURL.path) {
+            let newFileName = "\(baseName) (\(counter)).\(fileExtension)"
+            destinationURL = folderURL.appendingPathComponent(newFileName)
+            counter += 1
+        }
+        
+        return destinationURL
     }
 }
